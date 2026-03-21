@@ -25,7 +25,7 @@ jobs:
       DEBIAN_FRONTEND: noninteractive
       TZ: Asia/Shanghai
       DIFFCONFIG_FILE: ${{ github.event.inputs.diffconfig_file || 'diff.config' }}
-      UPLOAD_RELEASE: ${{ github.event.inputs.upload_release || 'false' }}
+      UPLOAD_RELEASE: ${{ github.event_name == 'schedule' && 'true' || (github.event.inputs.upload_release == 'true' && 'true' || 'false') }}
 
     steps:
       - name: Checkout
