@@ -31,6 +31,21 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Restore build caches
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            # ccache keeps compiled object hashes for compiler output reuse.
+            ${{ github.workspace }}/.cache/openwrt/ccache
+          key: openwrt-${{ runner.os }}-openwrt-25.12-${{ hashFiles(env.DIFFCONFIG_FILE) }}-${{ github.run_id }}
+          restore-keys: |
+            openwrt-${{ runner.os }}-openwrt-25.12-${{ hashFiles(env.DIFFCONFIG_FILE) }}-
+
+      - name: Compute cache rotation key
+        run: |
+          # Weekly rotation: same ISO year+week share one cache snapshot, next week creates a fresh key.
+          echo "CACHE_WEEK=$(date +'%G%V')" >> "$GITHUB_ENV"
+
       - name: Initialize build environment
         run: |
           sudo -E apt-get update
@@ -53,6 +68,11 @@ jobs:
       - name: Clone ImmortalWrt source
         run: |
           git clone --depth=1 --single-branch --branch "openwrt-25.12" https://github.com/immortalwrt/immortalwrt.git immortalwrt
+          mkdir -p "${GITHUB_WORKSPACE}/.cache/openwrt/ccache"
+          cd immortalwrt
+          echo "CCACHE_DIR=${GITHUB_WORKSPACE}/.cache/openwrt/ccache" >> "$GITHUB_ENV"
+          echo "CCACHE_MAXSIZE=1500M" >> "$GITHUB_ENV"
+          echo "/usr/lib/ccache" >> "$GITHUB_PATH"
 
       - name: Load custom files
         run: |
@@ -87,6 +107,7 @@ jobs:
 
           cp "${DIFFCONFIG_PATH}" .config
           echo "Using diffconfig: ${DIFFCONFIG_PATH}"
+          grep -q '^CONFIG_CCACHE=y' .config || echo 'CONFIG_CCACHE=y' >> .config
 
           if [ -f "${GITHUB_WORKSPACE}/diy-part2.sh" ]; then
             echo "Running diy-part2.sh"
@@ -109,6 +130,16 @@ jobs:
           cd immortalwrt
           echo "THREADS=$(nproc)" >> "$GITHUB_OUTPUT"
           make -j"$(nproc)" || make -j1 V=s
+          ccache -s || true
+
+      - name: Save build caches
+        if: ${{ always() }}
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ${{ github.workspace }}/.cache/openwrt/ccache
+          # Example key suffix: 202613 means ISO year 2026, week 13.
+          key: openwrt-${{ runner.os }}-openwrt-25.12-${{ hashFiles(env.DIFFCONFIG_FILE) }}-${{ env.CACHE_WEEK }}
 
       - name: Prepare artifacts
         if: ${{ always() }}
