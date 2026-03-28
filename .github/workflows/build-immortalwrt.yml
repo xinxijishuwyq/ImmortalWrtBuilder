@@ -143,6 +143,16 @@ jobs:
           make -j"$(nproc)" || make -j1 V=s
           ccache -s || true
 
+      - name: Print disk usage after build
+        if: ${{ always() }}
+        run: |
+          echo "=== Disk usage (df -h) ==="
+          df -h
+          echo
+          echo "=== Workspace size (du -sh) ==="
+          du -sh "${GITHUB_WORKSPACE}" || true
+          du -sh "${GITHUB_WORKSPACE}/immortalwrt" || true
+
       - name: Save build caches
         if: ${{ always() }}
         uses: actions/cache/save@v4
