@@ -37,14 +37,9 @@ jobs:
           path: |
             # ccache keeps compiled object hashes for compiler output reuse.
             ${{ github.workspace }}/.cache/openwrt/ccache
-          key: openwrt-${{ runner.os }}-openwrt-25.12-${{ hashFiles(env.DIFFCONFIG_FILE) }}-${{ github.run_id }}
+          key: openwrt-${{ runner.os }}-openwrt-25.12-${{ github.run_id }}
           restore-keys: |
-            openwrt-${{ runner.os }}-openwrt-25.12-${{ hashFiles(env.DIFFCONFIG_FILE) }}-
-
-      - name: Compute cache rotation key
-        run: |
-          # Weekly rotation: same ISO year+week share one cache snapshot, next week creates a fresh key.
-          echo "CACHE_WEEK=$(date +'%G%V')" >> "$GITHUB_ENV"
+            openwrt-${{ runner.os }}-openwrt-25.12-
 
       - name: Initialize build environment
         run: |
@@ -138,8 +133,8 @@ jobs:
         with:
           path: |
             ${{ github.workspace }}/.cache/openwrt/ccache
-          # Example key suffix: 202613 means ISO year 2026, week 13.
-          key: openwrt-${{ runner.os }}-openwrt-25.12-${{ hashFiles(env.DIFFCONFIG_FILE) }}-${{ env.CACHE_WEEK }}
+          # Save a fresh cache snapshot on every run.
+          key: openwrt-${{ runner.os }}-openwrt-25.12-${{ github.run_id }}
 
       - name: Prepare artifacts
         if: ${{ always() }}
