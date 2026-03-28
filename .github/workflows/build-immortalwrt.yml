@@ -31,32 +31,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Restore build caches
-        id: cache-restore
-        uses: actions/cache/restore@v4
-        with:
-          # ccache keeps compiled object hashes for compiler output reuse.
-          path: ${{ github.workspace }}/.cache/openwrt/ccache
-          key: openwrt-${{ runner.os }}-openwrt-25.12-${{ github.run_id }}
-          restore-keys: |
-            openwrt-${{ runner.os }}-openwrt-25.12-
-
-
-      - name: Report cache status
-        run: |
-          PRIMARY_KEY="${{ steps.cache-restore.outputs.cache-primary-key }}"
-          MATCHED_KEY="${{ steps.cache-restore.outputs.cache-matched-key }}"
-          CACHE_HIT="${{ steps.cache-restore.outputs.cache-hit }}"
-
-          echo "Cache primary key: ${PRIMARY_KEY}"
-          if [ "${CACHE_HIT}" = "true" ]; then
-            echo "ccache exact hit (primary key)."
-          elif [ -n "${MATCHED_KEY}" ]; then
-            echo "ccache fallback hit (restore-keys): ${MATCHED_KEY}"
-          else
-            echo "ccache miss (no cache restored for key/prefix). Build will proceed and save a new cache at the end."
-          fi
-
       - name: Initialize build environment
         run: |
           sudo -E apt-get update
@@ -75,6 +49,31 @@ jobs:
           large-packages: false
           docker-images: true
           swap-storage: false
+
+      - name: Restore build caches
+        id: cache-restore
+        uses: actions/cache/restore@v4
+        with:
+          # ccache keeps compiled object hashes for compiler output reuse.
+          path: ${{ github.workspace }}/.cache/openwrt/ccache
+          key: openwrt-${{ runner.os }}-openwrt-25.12-${{ github.run_id }}
+          restore-keys: |
+            openwrt-${{ runner.os }}-openwrt-25.12-
+
+      - name: Report cache status
+        run: |
+          PRIMARY_KEY="${{ steps.cache-restore.outputs.cache-primary-key }}"
+          MATCHED_KEY="${{ steps.cache-restore.outputs.cache-matched-key }}"
+          CACHE_HIT="${{ steps.cache-restore.outputs.cache-hit }}"
+
+          echo "Cache primary key: ${PRIMARY_KEY}"
+          if [ "${CACHE_HIT}" = "true" ]; then
+            echo "ccache exact hit (primary key)."
+          elif [ -n "${MATCHED_KEY}" ]; then
+            echo "ccache fallback hit (restore-keys): ${MATCHED_KEY}"
+          else
+            echo "ccache miss (no cache restored for key/prefix). Build will proceed and save a new cache at the end."
+          fi
 
       - name: Clone ImmortalWrt source
         run: |
