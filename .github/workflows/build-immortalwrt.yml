@@ -32,14 +32,24 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Restore build caches
+        id: cache-restore
         uses: actions/cache/restore@v4
         with:
-          path: |
-            # ccache keeps compiled object hashes for compiler output reuse.
-            ${{ github.workspace }}/.cache/openwrt/ccache
+          # ccache keeps compiled object hashes for compiler output reuse.
+          path: ${{ github.workspace }}/.cache/openwrt/ccache
           key: openwrt-${{ runner.os }}-openwrt-25.12-${{ github.run_id }}
           restore-keys: |
             openwrt-${{ runner.os }}-openwrt-25.12-
+
+
+      - name: Report cache status
+        run: |
+          echo "Cache primary key: openwrt-${{ runner.os }}-openwrt-25.12-${{ github.run_id }}"
+          if [ "${{ steps.cache-restore.outputs.cache-hit }}" = "true" ]; then
+            echo "ccache restore hit."
+          else
+            echo "ccache restore miss (no cache yet for key/prefix). Build will proceed and save a new cache at the end."
+          fi
 
       - name: Initialize build environment
         run: |
@@ -131,8 +141,7 @@ jobs:
         if: ${{ always() }}
         uses: actions/cache/save@v4
         with:
-          path: |
-            ${{ github.workspace }}/.cache/openwrt/ccache
+          path: ${{ github.workspace }}/.cache/openwrt/ccache
           # Save a fresh cache snapshot on every run.
           key: openwrt-${{ runner.os }}-openwrt-25.12-${{ github.run_id }}
 
